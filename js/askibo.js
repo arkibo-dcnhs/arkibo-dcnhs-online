@@ -23,7 +23,7 @@ function escapeHtml(s){
   if(!user.hasAgreedGuidelines){
     document.getElementById('guidelinesModal').classList.add('open');
     document.getElementById('agreeGuidelines').onclick = async ()=>{
-      await db.collection('users').doc(user.uid).update({hasAgreedGuidelines:true});
+      await db.collection('users').doc(user.uid).set({hasAgreedGuidelines:true},{merge:true});
       user.hasAgreedGuidelines=true;
       localStorage.setItem('arkibo_user',JSON.stringify(user));
       document.getElementById('guidelinesModal').classList.remove('open');
@@ -34,7 +34,6 @@ function escapeHtml(s){
     };
   }
 
-  // Event listeners
   document.getElementById('createPostBtn').onclick = createPost;
   document.getElementById('refreshPosts').onclick = loadPosts;
 
@@ -51,18 +50,20 @@ async function createPost(){
   if(!user) return;
 
   await db.collection('posts').add({
-    title, body,
+    title, 
+    body,
     authorName: user.fullName || user.name,
     authorEmail: user.email,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-    likes: 0, dislikes:0
+    likes: 0,
+    dislikes: 0
   });
 
   document.getElementById('postTitle').value='';
   document.getElementById('postBody').value='';
 }
 
-// Load posts (realtime)
+// Load posts
 function loadPosts(){
   db.collection('posts').orderBy('createdAt','desc').onSnapshot(snapshot=>{
     const container = document.getElementById('postsList');
@@ -91,19 +92,22 @@ function renderPost(postId, data){
   const body = document.createElement('div');
   body.innerText=data.body;
 
-  // Actions
   const actions = document.createElement('div');
   actions.style.marginTop='8px';
 
   const likeBtn = document.createElement('button');
   likeBtn.className='react-btn';
   likeBtn.innerHTML=`👍 <span class="count">${data.likes||0}</span>`;
-  likeBtn.onclick = async ()=> await db.collection('posts').doc(postId).update({likes:(data.likes||0)+1});
+  likeBtn.onclick = async ()=>{
+    await db.collection('posts').doc(postId).update({likes:(data.likes||0)+1});
+  };
 
   const dislikeBtn = document.createElement('button');
   dislikeBtn.className='react-btn';
   dislikeBtn.innerHTML=`👎 <span class="count">${data.dislikes||0}</span>`;
-  dislikeBtn.onclick = async ()=> await db.collection('posts').doc(postId).update({dislikes:(data.dislikes||0)+1});
+  dislikeBtn.onclick = async ()=>{
+    await db.collection('posts').doc(postId).update({dislikes:(data.dislikes||0)+1});
+  };
 
   const commentBtn = document.createElement('button');
   commentBtn.className='btn secondary';
@@ -114,7 +118,6 @@ function renderPost(postId, data){
   actions.appendChild(dislikeBtn);
   actions.appendChild(commentBtn);
 
-  // Comments wrapper
   const commentWrapper = document.createElement('div');
   commentWrapper.id=`comments-${postId}`;
   commentWrapper.style.display='none';
@@ -163,9 +166,9 @@ async function addComment(postId, text){
     body:text,
     byName:user.fullName || user.name,
     byEmail:user.email,
-    createdAt:firebase.firestore.FieldValue.serverTimestamp(),
-    likes:0, dislikes:0
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
   });
 }
+
 
 
