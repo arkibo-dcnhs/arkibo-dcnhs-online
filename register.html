@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Arkibo — Register</title>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <div class="brand">
+                <h1>arkibo</h1>
+      </div>
+
+      <div class="form-row"><input id="regFullName" type="text" placeholder="Full name" /></div>
+      <div class="form-row"><input id="regEmail" type="email" placeholder="School email" /></div>
+      <div class="form-row"><input id="regPass" type="password" placeholder="Password" /></div>
+
+      <div class="form-row">
+        <select id="regRole">
+          <option value="">-- I am a --</option>
+          <option value="student">Student</option>
+          <option value="teacher">Teacher</option>
+        </select>
+      </div>
+
+      <!-- Student-only fields -->
+      <div id="studentFields" class="hidden">
+        <div class="form-row"><input id="regLRN" type="text" placeholder="LRN (student number)" /></div>
+        <div class="form-row"><input id="regSection" type="text" placeholder="Section (e.g., 10-A)" /></div>
+      </div>
+
+      <div class="form-row">
+        <button id="registerBtn" class="btn">Register</button>
+      </div>
+
+      <div class="center">
+        <p>Already registered? <a class="small-link" href="index.html">Login</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>

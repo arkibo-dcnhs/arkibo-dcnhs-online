@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Arkibo Online</title>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+  <div class="app">
+    <div class="topnav card">
+      <div class="title">Arkibo Online</div>
+      <button class="profile-btn" id="gotoProfile">👤</button>
+    </div>
+
+    <div class="card">
+      <div style="display:grid;gap:10px">
+        <button class="btn" onclick="location.href='announcements.html'">📚 Announcements</button>
+        <button class="btn" onclick="location.href='askibo.html'">💬 AsKibo Forums</button>
+        <button class="btn" onclick="location.href='profile.html'">🧾 Profile & Logout</button>
+      </div>
+    </div>
+
+    <div id="adminPanel" class="card hidden">
+      <h3>Admin</h3>
+      <p>Approve pending students and manage config.</p>
+      <button class="btn secondary" onclick="location.href='admin.html'">Open Admin Panel</button>
+    </div>
+  </div>
+
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script>
+    (async ()=>{
+      const user = await loadCurrentUser();
+      if(!user) { location.href='index.html'; return; }
+
+      const adminPanel = document.getElementById('adminPanel');
+      if(user.role === 'admin' || user.role === 'teacher'){
+        adminPanel.classList.remove('hidden');
+      } else {
+        adminPanel.remove(); // completely remove for students
+      }
+    })();
+  </script>
+
+</body>
+</html>

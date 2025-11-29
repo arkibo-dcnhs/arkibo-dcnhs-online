@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Arkibo — Announcements</title>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+  <div class="app">
+    <div class="topnav card">
+      <div class="title">Announcements</div>
+      <button class="profile-btn" onclick="location.href='main.html'">↩</button>
+    </div>
+
+    <!-- ONLY TEACHERS & ADMINS SHOULD SEE THIS -->
+    <!-- Default: hidden ALWAYS. JS will unhide if role is teacher/admin -->
+    <div id="createArea" class="card hidden">
+      <h3>Make Announcement</h3>
+      <input id="annTitle" placeholder="Title"/>
+      <textarea id="annBody" placeholder="Only teachers are allowed to announce. Disobedience will not be tolerated...."></textarea>
+      <button id="postAnnBtn" class="btn">Publish</button>
+    </div>
+
+    <!-- ANNOUNCEMENTS LIST -->
+    <div id="annList" class="card">
+      <h3>Latest Announcements</h3>
+      <div id="announcementsContainer"></div>
+    </div>
+  </div>
+
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/announcements.js"></script>
+</body>
+</html>
