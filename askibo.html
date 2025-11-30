@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Arkibo — AsKibo Forums</title>
+  <title>Arkibo — AsKibo</title>
 
-  <!-- Firebase SDKs -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -13,44 +13,43 @@
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body>
-<div class="app">
-  <div class="topnav card">
-    <div class="title">AsKibo Forums</div>
-    <button class="profile-btn" onclick="location.href='main.html'">↩ Back</button>
-  </div>
+  <div class="app">
+    <div class="topnav card">
+      <div class="title">AsKibo Forums</div>
+      <button class="profile-btn" onclick="location.href='main.html'">↩</button>
+    </div>
 
-  <!-- Guidelines Modal -->
-  <div id="guidelinesModal" class="modal">
-    <div class="modal-card">
-      <h3>Community Guidelines</h3>
-      <p>Be respectful. No harassment, hate speech, or personal attacks. Keep posts school-appropriate. Violations may lead to warnings or account suspension.</p>
-      <div style="display:flex;gap:10px;margin-top:12px">
-        <button id="agreeGuidelines" class="btn">I Agree</button>
-        <button id="disagreeGuidelines" class="btn secondary">I Disagree</button>
+    <!-- guidelines modal -->
+    <div id="guidelinesModal" class="modal">
+      <div class="modal-card">
+        <h3>Community Guidelines</h3>
+        <p>Be respectful. No harassment, hate speech, personal attacks, or rude/explicit content. Keep posts school-appropriate. Violations may lead to warnings or account suspension.</p>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button id="agreeGuidelines" class="btn">I Agree</button>
+          <button id="disagreeGuidelines" class="btn secondary">I Disagree</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Post creator -->
-  <div id="postCreator" class="card">
-    <input id="postTitle" placeholder="Post title (short)" />
-    <textarea id="postBody" placeholder="Write your question or post..."></textarea>
-    <div style="display:flex;gap:8px">
-      <button id="createPostBtn" class="btn">Post</button>
-      <button id="refreshPosts" class="btn secondary">Refresh</button>
+    <!-- Post Creator -->
+    <div id="postCreator" class="card">
+      <input id="postTitle" placeholder="Post title (short)"/>
+      <textarea id="postBody" placeholder="Write your question or post..."></textarea>
+      <div style="display:flex;gap:8px">
+        <button id="createPostBtn" class="btn">Post</button>
+        <button id="refreshPosts" class="btn secondary">Refresh</button>
+      </div>
+    </div>
+
+    <!-- Posts List -->
+    <div id="postsContainer" class="card">
+      <h3>Recent Posts</h3>
+      <div id="postsList"></div>
     </div>
   </div>
 
-  <!-- Posts container -->
-  <div id="postsContainer" class="card">
-    <h3>Recent Posts</h3>
-    <div id="postsList"></div>
-  </div>
-</div>
-
-<!-- JS -->
-<script src="js/firebase-config.js"></script>
-<script src="js/askibo.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/askibo.js"></script>
 </body>
 </html>
-
