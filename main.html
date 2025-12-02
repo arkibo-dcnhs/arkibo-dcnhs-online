@@ -43,12 +43,7 @@
 
       const adminPanel = document.getElementById('adminPanel');
 
-      // Teacher/Admin get the full panel including "Create Activity"
-      if(user.role === 'admin' || user.role === 'teacher'){
-        adminPanel.classList.remove('hidden');
-      } else {
-        // Students do not see admin panel or create-activity button
-        adminPanel.remove();
+      
       }
     })();
   </script>
