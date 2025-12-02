@@ -292,3 +292,162 @@ input:focus, select:focus, textarea:focus {
   .brand h1{ font-size:24px; }
 }
 
+/* =====================================================
+   ARKIBO ACTIVITIES — NEW UI EXTENSION (APPENDED ONLY)
+   ===================================================== */
+
+.activity-card {
+  background:#fff;
+  border-radius:14px;
+  padding:16px;
+  border:1px solid #f1f3f5;
+  box-shadow: var(--shadow-1);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.activity-card h3 {
+  font-size:17px;
+  font-weight:600;
+  color:#0f5132;
+}
+
+.activity-card p {
+  font-size:14px;
+  color:#111;
+}
+
+.activity-card .btn.small {
+  margin-top:6px;
+  width:auto;
+  padding:8px 12px;
+  font-size:13.5px;
+}
+
+.activity-detail {
+  padding:16px;
+  background:#fff;
+  border-radius:14px;
+  box-shadow: var(--shadow-2);
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  border:1px solid #f1f3f5;
+}
+
+.activity-detail .label {
+  font-size:14px;
+  font-weight:600;
+  color:var(--arkibo-green);
+}
+
+.activity-detail .value {
+  font-size:15px;
+  color:#111;
+}
+
+.action-buttons {
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  margin-top:10px;
+}
+
+.btn.notify {
+  background:#ffb703;
+  color:#111;
+  font-weight:600;
+}
+
+.btn.grade {
+  background:#219ebc;
+  color:#fff;
+}
+
+.notify-form {
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.notify-form input, .notify-form select {
+  border-radius:10px;
+  padding:10px;
+  border:1px solid #e6e9ef;
+  font-size:15px;
+}
+
+.grade-box {
+  background:#f1fdf3;
+  border:1px solid #c8ebd2;
+  padding:14px;
+  border-radius:10px;
+  font-size:15px;
+  color:#0f5132;
+  font-weight:600;
+}
+
+.grade-empty {
+  padding:14px;
+  background:#fff4e6;
+  border:1px solid #ffd6a5;
+  border-radius:10px;
+  font-size:14px;
+  color:#a05a00;
+  font-weight:600;
+}
+
+.student-dashboard {
+  background:#fff;
+  border-radius:14px;
+  padding:18px;
+  border:1px solid #f1f3f5;
+  box-shadow:var(--shadow-1);
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.student-dashboard h2 {
+  font-size:18px;
+  color:#0f5132;
+  margin-bottom:6px;
+}
+
+.grade-input {
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.grade-input input {
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #e6e9ef;
+}
+
+.grade-input textarea {
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #e6e9ef;
+  min-height:60px;
+}
+
+.notification-item {
+  background:#fff;
+  padding:14px;
+  border-radius:12px;
+  border:1px solid #f1f3f5;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  box-shadow:var(--shadow-1);
+}
+
+.notification-item .meta {
+  font-size:13px;
+  color:var(--muted);
+}
+
+
