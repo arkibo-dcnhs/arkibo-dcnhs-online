@@ -2,13 +2,15 @@
 (() => {
   let currentUser = null;
 
-  function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
-  
-  function formatTimestamp(ts){
-    if(!ts) return '';
-    if(ts.seconds!==undefined) return new Date(ts.seconds*1000).toLocaleString();
-    if(ts.toDate) return ts.toDate().toLocaleString();
-    return new Date(ts).toLocaleString();
+  function escapeHtml(s){
+    if(!s) return '';
+    return String(s).replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
+  }
+
+  async function loadCurrentUserOrRedirect(){
+    const user = await loadCurrentUser();
+    if(!user){ location.href='index.html'; return null; }
+    return user;
   }
 
   function renderActivityElement(docId, data) {
@@ -38,20 +40,26 @@
       ${studentButtons}
     `;
 
-    // Student actions
+    // STUDENT BUTTON ACTIONS
     if(currentUser.role==='student'){
+      // Notify teacher "I'm done"
       wrapper.querySelector(`#doneBtn-${docId}`).addEventListener('click', async ()=>{
         const studentName = currentUser.fullName||currentUser.name||currentUser.email;
         const gradeLevel = currentUser.gradeLevel||'-';
-        const confirmMsg = `Submit your completion for ${data.title}?`;
-        if(!confirm(confirmMsg)) return;
+        if(!confirm(`Submit completion for "${data.title}"?`)) return;
 
         try{
+          // Mark submission in activity
           await db.collection('activities').doc(docId)
             .collection('submissions').doc(currentUser.uid)
-            .set({ doneAt: firebase.firestore.FieldValue.serverTimestamp(), uid: currentUser.uid, studentName, gradeLevel }, { merge:true });
+            .set({
+              doneAt: firebase.firestore.FieldValue.serverTimestamp(),
+              uid: currentUser.uid,
+              studentName,
+              gradeLevel
+            }, { merge:true });
 
-          // send notification to teacher
+          // Create teacher notification
           await db.collection('notifications').add({
             activityId: docId,
             activityName: data.title,
@@ -62,22 +70,24 @@
           });
 
           alert('Teacher notified!');
-        }catch(e){ console.error(e); alert('Failed to notify'); }
+        }catch(e){ console.error(e); alert('Failed to notify teacher.'); }
       });
 
+      // View grade
       wrapper.querySelector(`#gradeBtn-${docId}`).addEventListener('click', async ()=>{
         const snap = await db.collection('activities').doc(docId)
           .collection('grades').doc(currentUser.uid).get();
         if(snap.exists){
           const d = snap.data();
           alert(`Grade: ${d.value}\nRemarks: ${d.remarks||'None'}`);
-        } else alert('No grade available currently. Please wait for teacher.');
+        } else alert('No grade available yet. Please wait for teacher.');
       });
 
+      // Copy link
       wrapper.querySelector(`#copyLink-${docId}`).addEventListener('click', ()=>{
         navigator.clipboard.writeText(data.link||'').then(()=>{
           alert('Link copied to clipboard!');
-        }).catch(()=>{ alert('Failed to copy'); });
+        }).catch(()=>{ alert('Failed to copy link.'); });
       });
     }
 
@@ -89,12 +99,15 @@
     const yearSubject = (document.getElementById('activityYear')?.value||'').trim();
     const deadline = (document.getElementById('activityDeadline')?.value||'').trim();
     const link = (document.getElementById('activityLink')?.value||'').trim();
-    if(!title||!yearSubject||!link){ return alert('Fill required fields'); }
-    if(!currentUser || (currentUser.role!=='teacher' && currentUser.role!=='admin')) return alert('Only teachers/admins can post');
+    if(!title||!yearSubject||!link) return alert('Please fill required fields.');
+    if(currentUser.role!=='teacher' && currentUser.role!=='admin') return alert('Only teachers/admins can post.');
 
     try{
       await db.collection('activities').add({
-        title, yearSubject, deadline, link,
+        title,
+        yearSubject,
+        deadline,
+        link,
         authorName: currentUser.fullName||currentUser.name||currentUser.email,
         authorEmail: currentUser.email,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -104,13 +117,14 @@
       document.getElementById('activityDeadline').value='';
       document.getElementById('activityLink').value='';
       alert('Activity published!');
-    }catch(e){ console.error(e); alert('Failed to publish'); }
+    }catch(e){ console.error(e); alert('Failed to publish activity.'); }
   }
 
   (async ()=>{
-    currentUser = await loadCurrentUser();
-    if(!currentUser){ location.href='index.html'; return; }
+    currentUser = await loadCurrentUserOrRedirect();
+    if(!currentUser) return;
 
+    // TEACHER/ADMIN CREATE AREA
     const createArea = document.getElementById('createActivityArea');
     const postBtn = document.getElementById('postActivityBtn');
     if(createArea && postBtn){
@@ -123,6 +137,7 @@
     const container = document.getElementById('activitiesContainer');
     if(!container) return;
 
+    // Real-time listener for all activities
     db.collection('activities').orderBy('createdAt','desc')
       .onSnapshot(snapshot=>{
         container.innerHTML='';
