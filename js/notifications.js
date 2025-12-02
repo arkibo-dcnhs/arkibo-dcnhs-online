@@ -5,24 +5,34 @@
 
   const container = document.getElementById('notifContainer');
 
-  // Load notifications for student or teacher
-  const query = user.role==='student'
-    ? db.collection('notifications').where('studentEmail','==',user.email).orderBy('createdAt','desc')
-    : db.collection('notifications').where('teacherEmail','==',user.email).orderBy('createdAt','desc');
+  // Listen to notifications for this user
+  const query = user.role === 'student'
+    ? db.collection('notifications')
+        .where('studentEmail','==',user.email)
+        .orderBy('createdAt','desc')
+    : db.collection('notifications')
+        .where('teacherEmail','==',user.email)
+        .orderBy('createdAt','desc');
 
   query.onSnapshot(snapshot=>{
     container.innerHTML='';
-    if(snapshot.empty){ container.innerHTML='<p style="color:var(--muted)">No notifications.</p>'; return; }
+    if(snapshot.empty){
+      container.innerHTML='<p style="color:var(--muted)">No notifications.</p>';
+      return;
+    }
 
     snapshot.forEach(doc=>{
       const d = doc.data();
       const card = document.createElement('div');
       card.className='card';
       card.style.marginBottom='8px';
+
       if(user.role==='student'){
-        card.innerHTML=`<p>${d.message || `Teacher ${d.teacherName || ''} has graded your activity.`}</p>`;
+        const msg = d.message || `Teacher ${d.teacherName || ''} has graded your activity.`;
+        card.innerHTML=`<p>${msg}</p>`;
       } else {
-        card.innerHTML=`<p>${d.studentName} has finished ${d.activityName}</p>`;
+        // teacher sees notifications from students
+        card.innerHTML=`<p>${d.studentName} has finished "${d.activityName}"</p>`;
         const btn = document.createElement('button');
         btn.className='btn small';
         btn.innerText='Grade';
@@ -31,8 +41,13 @@
         });
         card.appendChild(btn);
       }
+
       container.appendChild(card);
     });
+  }, err=>{
+    console.error('Failed to load notifications:', err);
+    container.innerHTML='<p style="color:var(--muted)">Error loading notifications</p>';
   });
 
 })();
+
