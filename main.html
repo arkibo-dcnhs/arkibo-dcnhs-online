@@ -22,14 +22,21 @@
       <div style="display:grid;gap:10px">
         <button class="btn" onclick="location.href='announcements.html'">📚 Announcements</button>
         <button class="btn" onclick="location.href='askibo.html'">💬 AsKibo Forums</button>
+        <button class="btn" onclick="location.href='activities.html'">📝 Arkibo Activities</button>
         <button class="btn" onclick="location.href='profile.html'">🧾 Profile & Logout</button>
       </div>
     </div>
 
+    <!-- TEACHER/ADMIN ONLY PANEL -->
     <div id="adminPanel" class="card hidden">
       <h3>Admin</h3>
       <p>Approve pending students and manage config.</p>
       <button class="btn secondary" onclick="location.href='admin.html'">Open Admin Panel</button>
+
+      <!-- NEW: CREATE ACTIVITY BUTTON (Teacher/Admin Only) -->
+      <button class="btn secondary" onclick="location.href='create_activity.html'">
+        ➕ Create Activity / Quiz
+      </button>
     </div>
   </div>
 
@@ -41,13 +48,17 @@
       if(!user) { location.href='index.html'; return; }
 
       const adminPanel = document.getElementById('adminPanel');
+
+      // Teacher/Admin get the full panel including "Create Activity"
       if(user.role === 'admin' || user.role === 'teacher'){
         adminPanel.classList.remove('hidden');
       } else {
-        adminPanel.remove(); // completely remove for students
+        // Students do not see admin panel or create-activity button
+        adminPanel.remove();
       }
     })();
   </script>
 
 </body>
 </html>
+
