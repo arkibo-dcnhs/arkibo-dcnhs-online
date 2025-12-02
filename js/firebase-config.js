@@ -37,3 +37,28 @@ async function getApprovedTeachers() {
   return approvedTeachersForTesting;
 }
 
+/* -----------------------------
+   Optional: Firestore references
+   ----------------------------- */
+const collections = {
+  announcements: db.collection("announcements"),
+  activities: db.collection("activities"),
+  config: db.collection("config"),
+};
+
+// helper to get student submission for a specific activity
+function getActivitySubmissionRef(activityId, studentUid) {
+  return collections.activities
+    .doc(activityId)
+    .collection("submissions")
+    .doc(studentUid);
+}
+
+// helper to get all submissions for a specific activity (teacher/admin)
+function getActivitySubmissionsRef(activityId) {
+  return collections.activities
+    .doc(activityId)
+    .collection("submissions");
+}
+
+
