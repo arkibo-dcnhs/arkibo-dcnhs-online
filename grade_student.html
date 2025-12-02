@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Arkibo — Grade Student</title>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+  <div class="app">
+    <div class="topnav card">
+      <div class="title">Grade Student</div>
+      <button class="profile-btn" onclick="location.href='teacher_dashboard.html'">↩</button>
+    </div>
+
+    <div id="gradeForm" class="card">
+      <h3 id="studentName">Student</h3>
+      <p id="yearSection">Year & Section</p>
+      <input id="gradeValue" type="number" placeholder="Enter Grade"/>
+      <input id="gradeRemarks" placeholder="Remarks (optional)"/>
+      <button id="submitGrade" class="btn">Submit Grade</button>
+    </div>
+  </div>
+
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/grade_student.js"></script>
+</body>
+</html>
