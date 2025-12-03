@@ -13,6 +13,25 @@
     return user;
   }
 
+  // HELPER: Add star points
+  async function addStarPoints(points, reason='') {
+    if(!currentUser || currentUser.role!=='student') return;
+    try{
+      const ref = db.collection('users').doc(currentUser.uid);
+      await ref.set({
+        starPoints: firebase.firestore.FieldValue.increment(points)
+      }, { merge:true });
+
+      // Log points
+      await db.collection('star_points_logs').add({
+        uid: currentUser.uid,
+        points,
+        reason,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }catch(e){ console.error('Failed to add star points:', e); }
+  }
+
   function renderActivityElement(docId, data) {
     const wrapper = document.createElement('div');
     wrapper.className = 'announcement';
@@ -35,21 +54,23 @@
         <div style="font-size:12px;color:var(--muted)">Deadline: ${data.deadline||'N/A'}</div>
       </div>
       <div style="margin-top:8px;">
-        <a href="${escapeHtml(data.link)}" target="_blank">📄 Open Activity / Quiz</a>
+        <a href="${escapeHtml(data.link)}" target="_blank" id="activityLink-${docId}">📄 Open Activity / Quiz</a>
       </div>
       ${studentButtons}
     `;
 
-    // STUDENT BUTTON ACTIONS
     if(currentUser.role==='student'){
+      // CLICK ACTIVITY/QUIZ -> +30 points
+      wrapper.querySelector(`#activityLink-${docId}`).addEventListener('click', async ()=>{
+        await addStarPoints(30, `Opened Activity/Quiz "${data.title}"`);
+      });
+
       // Notify teacher "I'm done"
       wrapper.querySelector(`#doneBtn-${docId}`).addEventListener('click', async ()=>{
         const studentName = currentUser.fullName||currentUser.name||currentUser.email;
         const gradeLevel = currentUser.gradeLevel||'-';
         if(!confirm(`Submit completion for "${data.title}"?`)) return;
-
         try{
-          // Mark submission in activity
           await db.collection('activities').doc(docId)
             .collection('submissions').doc(currentUser.uid)
             .set({
@@ -59,7 +80,6 @@
               gradeLevel
             }, { merge:true });
 
-          // Create teacher notification
           await db.collection('notifications').add({
             activityId: docId,
             activityName: data.title,
@@ -69,6 +89,8 @@
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
 
+          // Award +50 points
+          await addStarPoints(50, `Notified teacher completion for "${data.title}"`);
           alert('Teacher notified!');
         }catch(e){ console.error(e); alert('Failed to notify teacher.'); }
       });
@@ -85,9 +107,8 @@
 
       // Copy link
       wrapper.querySelector(`#copyLink-${docId}`).addEventListener('click', ()=>{
-        navigator.clipboard.writeText(data.link||'').then(()=>{
-          alert('Link copied to clipboard!');
-        }).catch(()=>{ alert('Failed to copy link.'); });
+        navigator.clipboard.writeText(data.link||'').then(()=>{ alert('Link copied to clipboard!'); })
+        .catch(()=>{ alert('Failed to copy link.'); });
       });
     }
 
@@ -148,5 +169,5 @@
         });
       }, err=>{ console.error(err); container.innerHTML='<p style="color:var(--muted)">Error loading activities</p>'; });
   })();
-
 })();
+
