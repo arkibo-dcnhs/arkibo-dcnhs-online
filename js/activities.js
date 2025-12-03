@@ -61,55 +61,71 @@
 
     if(currentUser.role==='student'){
       // CLICK ACTIVITY/QUIZ -> +30 points
-      wrapper.querySelector(`#activityLink-${docId}`).addEventListener('click', async ()=>{
-        await addStarPoints(30, `Opened Activity/Quiz "${data.title}"`);
-      });
+      const linkEl = wrapper.querySelector(`#activityLink-${docId}`);
+      if (linkEl) {
+        linkEl.addEventListener('click', async ()=>{
+          try {
+            await addStarPoints(30, `Opened Activity/Quiz "${data.title}"`);
+          } catch(e){ console.error('Error awarding points for opening activity', e); }
+        });
+      }
 
       // Notify teacher "I'm done"
-      wrapper.querySelector(`#doneBtn-${docId}`).addEventListener('click', async ()=>{
-        const studentName = currentUser.fullName||currentUser.name||currentUser.email;
-        const gradeLevel = currentUser.gradeLevel||'-';
-        if(!confirm(`Submit completion for "${data.title}"?`)) return;
-        try{
-          await db.collection('activities').doc(docId)
-            .collection('submissions').doc(currentUser.uid)
-            .set({
-              doneAt: firebase.firestore.FieldValue.serverTimestamp(),
-              uid: currentUser.uid,
+      const doneBtn = wrapper.querySelector(`#doneBtn-${docId}`);
+      if (doneBtn) {
+        doneBtn.addEventListener('click', async ()=>{
+          const studentName = currentUser.fullName||currentUser.name||currentUser.email;
+          const gradeLevel = currentUser.gradeLevel||'-';
+          if(!confirm(`Submit completion for "${data.title}"?`)) return;
+          try{
+            await db.collection('activities').doc(docId)
+              .collection('submissions').doc(currentUser.uid)
+              .set({
+                doneAt: firebase.firestore.FieldValue.serverTimestamp(),
+                uid: currentUser.uid,
+                studentName,
+                gradeLevel
+              }, { merge:true });
+
+            await db.collection('notifications').add({
+              activityId: docId,
+              activityName: data.title,
+              teacherEmail: data.authorEmail,
               studentName,
-              gradeLevel
-            }, { merge:true });
+              studentEmail: currentUser.email,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
 
-          await db.collection('notifications').add({
-            activityId: docId,
-            activityName: data.title,
-            teacherEmail: data.authorEmail,
-            studentName,
-            studentEmail: currentUser.email,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-
-          // Award +50 points
-          await addStarPoints(50, `Notified teacher completion for "${data.title}"`);
-          alert('Teacher notified!');
-        }catch(e){ console.error(e); alert('Failed to notify teacher.'); }
-      });
+            // Award +50 points
+            await addStarPoints(50, `Notified teacher completion for "${data.title}"`);
+            alert('Teacher notified!');
+          }catch(e){ console.error(e); alert('Failed to notify teacher.'); }
+        });
+      }
 
       // View grade
-      wrapper.querySelector(`#gradeBtn-${docId}`).addEventListener('click', async ()=>{
-        const snap = await db.collection('activities').doc(docId)
-          .collection('grades').doc(currentUser.uid).get();
-        if(snap.exists){
-          const d = snap.data();
-          alert(`Grade: ${d.value}\nRemarks: ${d.remarks||'None'}`);
-        } else alert('No grade available yet. Please wait for teacher.');
-      });
+      const gradeBtn = wrapper.querySelector(`#gradeBtn-${docId}`);
+      if (gradeBtn) {
+        gradeBtn.addEventListener('click', async ()=> {
+          try {
+            const snap = await db.collection('activities').doc(docId)
+              .collection('grades').doc(currentUser.uid).get();
+            if(snap.exists){
+              const d = snap.data();
+              alert(`Grade: ${d.value}\nRemarks: ${d.remarks||'None'}`);
+            } else alert('No grade available yet. Please wait for teacher.');
+          } catch(e){ console.error('Error fetching grade', e); alert('Failed to fetch grade'); }
+        });
+      }
 
       // Copy link
-      wrapper.querySelector(`#copyLink-${docId}`).addEventListener('click', ()=>{
-        navigator.clipboard.writeText(data.link||'').then(()=>{ alert('Link copied to clipboard!'); })
-        .catch(()=>{ alert('Failed to copy link.'); });
-      });
+      const copyBtn = wrapper.querySelector(`#copyLink-${docId}`);
+      if (copyBtn) {
+        copyBtn.addEventListener('click', ()=>{
+          navigator.clipboard.writeText(data.link||'').then(()=>{ alert('Link copied to clipboard!'); })
+          .catch(()=>{ alert('Failed to copy link.'); });
+        });
+      }
     }
 
     return wrapper;
@@ -170,4 +186,3 @@
       }, err=>{ console.error(err); container.innerHTML='<p style="color:var(--muted)">Error loading activities</p>'; });
   })();
 })();
-
