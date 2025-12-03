@@ -15,29 +15,18 @@
   const gradeRemarksEl = document.getElementById('gradeRemarks');
   const submitBtn = document.getElementById('submitGrade');
 
-  // HELPER: Add star points to student (by student email lookup)
-  async function addStarPoints(points, reason=""){
-    try{
-      const studentSnap = await db.collection('users').where('email','==',studentEmail).limit(1).get();
-      if(studentSnap.empty) return;
-      const studentDocId = studentSnap.docs[0].id;
-      await db.collection('users').doc(studentDocId).set({
-        starPoints: firebase.firestore.FieldValue.increment(points)
-      }, { merge:true });
+  // Get student record
+  const studentSnap = await db.collection('users')
+    .where('email','==',studentEmail)
+    .limit(1)
+    .get();
 
-      await db.collection('star_points_logs').add({
-        uid: studentDocId,
-        points,
-        reason,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    }catch(e){ console.error('Failed to add star points:', e); }
+  if(studentSnap.empty){
+    alert('Student not found');
+    return;
   }
 
-  // fetch student info
-  const studentDocSnap = await db.collection('users').where('email','==',studentEmail).limit(1).get();
-  if(studentDocSnap.empty){ alert('Student not found'); return; }
-  const studentDoc = studentDocSnap.docs[0]; // firestore doc
+  const studentDoc = studentSnap.docs[0];
   const studentData = studentDoc.data();
 
   let studentName = studentData.fullName || studentData.name || studentEmail;
@@ -48,36 +37,49 @@
 
   submitBtn.addEventListener('click', async ()=>{
     const val = gradeValueEl.value;
-    if(val === '' || val === null || val === undefined){ alert('Enter a grade'); return; }
+    if(val === '' || val === null || val === undefined){
+      alert('Enter a grade');
+      return;
+    }
+
     const remarks = gradeRemarksEl.value;
+    const numericGrade = Number(val) || 0;
 
     try{
-      // store grade under activity
+      // Store student grade
       await db.collection('activities').doc(activityId)
-        .collection('grades').doc(studentDoc.id).set({
-          value: val,
+        .collection('grades').doc(studentDoc.id)
+        .set({
+          value: numericGrade,
           remarks,
           gradedBy: user.fullName||user.name||user.email,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-      // send notification to student
+      // Notify student
       await db.collection('notifications').add({
         studentEmail,
         teacherName: user.fullName||user.name||user.email,
-        message: `Congratulations. Teacher ${user.fullName||user.name} has graded your output. Please check "View Grade".`,
+        message: `Your activity has been graded.`,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      // --- OPTION A: 1 star point per grade point ---
-      const numericGrade = Number(val) || 0;
-      const pointsAwarded = Math.max(0, Math.floor(numericGrade)); // ensure integer non-negative
+      // ⭐ Award star points = same as grade value (ex: grade 85 = +85)
+      const pointsAwarded = Math.max(0, Math.floor(numericGrade));
       if(pointsAwarded > 0){
-        await addStarPoints(pointsAwarded, `Graded activity "${activityId}" with grade ${numericGrade}`);
+        await incrementStarPoints(studentDoc.id, pointsAwarded);
+        console.log(`Awarded ${pointsAwarded} points for grade.`);
       }
 
-      alert(`Grade submitted and notification sent! Star Points awarded: ${pointsAwarded}`);
-      gradeValueEl.value=''; gradeRemarksEl.value='';
-    } catch(e){ console.error(e); alert('Failed to submit grade'); }
+      alert(`Grade submitted! Star Points awarded: ${pointsAwarded}`);
+
+      gradeValueEl.value='';
+      gradeRemarksEl.value='';
+
+    } catch(e){
+      console.error(e);
+      alert('Failed to submit grade');
+    }
   });
 })();
+
