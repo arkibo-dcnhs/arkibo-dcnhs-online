@@ -13,23 +13,15 @@
     return user;
   }
 
-  // HELPER: Add star points
-  async function addStarPoints(points, reason='') {
-    if(!currentUser || currentUser.role!=='student') return;
-    try{
-      const ref = db.collection('users').doc(currentUser.uid);
-      await ref.set({
-        starPoints: firebase.firestore.FieldValue.increment(points)
-      }, { merge:true });
-
-      // Log points
-      await db.collection('star_points_logs').add({
-        uid: currentUser.uid,
-        points,
-        reason,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    }catch(e){ console.error('Failed to add star points:', e); }
+  // ⭐ NEW — STAR POINTS via utils.js
+  async function awardPoints(amount, reason){
+    if(!currentUser || currentUser.role !== 'student') return;
+    try {
+      await incrementStarPoints(currentUser.uid, amount);
+      console.log(`Awarded ${amount} points for ${reason}`);
+    } catch(e){
+      console.error('Error awarding points:', e);
+    }
   }
 
   function renderActivityElement(docId, data) {
@@ -60,24 +52,25 @@
     `;
 
     if(currentUser.role==='student'){
-      // CLICK ACTIVITY/QUIZ -> +30 points
+
+      // ⭐ OPEN ACTIVITY = +30 points
       const linkEl = wrapper.querySelector(`#activityLink-${docId}`);
       if (linkEl) {
         linkEl.addEventListener('click', async ()=>{
-          try {
-            await addStarPoints(30, `Opened Activity/Quiz "${data.title}"`);
-          } catch(e){ console.error('Error awarding points for opening activity', e); }
+          await awardPoints(30, `opened activity "${data.title}"`);
         });
       }
 
-      // Notify teacher "I'm done"
+      // ⭐ "I'm Done" = +50 points
       const doneBtn = wrapper.querySelector(`#doneBtn-${docId}`);
       if (doneBtn) {
         doneBtn.addEventListener('click', async ()=>{
-          const studentName = currentUser.fullName||currentUser.name||currentUser.email;
-          const gradeLevel = currentUser.gradeLevel||'-';
+          const studentName = currentUser.fullName || currentUser.name || currentUser.email;
+          const gradeLevel = currentUser.gradeLevel || '-';
+
           if(!confirm(`Submit completion for "${data.title}"?`)) return;
-          try{
+
+          try {
             await db.collection('activities').doc(docId)
               .collection('submissions').doc(currentUser.uid)
               .set({
@@ -96,25 +89,33 @@
               createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // Award +50 points
-            await addStarPoints(50, `Notified teacher completion for "${data.title}"`);
+            await awardPoints(50, `completion of activity "${data.title}"`);
             alert('Teacher notified!');
-          }catch(e){ console.error(e); alert('Failed to notify teacher.'); }
+          } catch(e){
+            console.error(e);
+            alert('Failed to notify teacher.');
+          }
         });
       }
 
       // View grade
       const gradeBtn = wrapper.querySelector(`#gradeBtn-${docId}`);
       if (gradeBtn) {
-        gradeBtn.addEventListener('click', async ()=> {
+        gradeBtn.addEventListener('click', async ()=>{
           try {
             const snap = await db.collection('activities').doc(docId)
               .collection('grades').doc(currentUser.uid).get();
+
             if(snap.exists){
               const d = snap.data();
               alert(`Grade: ${d.value}\nRemarks: ${d.remarks||'None'}`);
-            } else alert('No grade available yet. Please wait for teacher.');
-          } catch(e){ console.error('Error fetching grade', e); alert('Failed to fetch grade'); }
+            } else {
+              alert('No grade available yet.');
+            }
+          } catch(e){
+            console.error('Error fetching grade', e);
+            alert('Failed to fetch grade.');
+          }
         });
       }
 
@@ -122,8 +123,9 @@
       const copyBtn = wrapper.querySelector(`#copyLink-${docId}`);
       if (copyBtn) {
         copyBtn.addEventListener('click', ()=>{
-          navigator.clipboard.writeText(data.link||'').then(()=>{ alert('Link copied to clipboard!'); })
-          .catch(()=>{ alert('Failed to copy link.'); });
+          navigator.clipboard.writeText(data.link||'')
+            .then(()=> alert('Link copied!'))
+            .catch(()=> alert('Failed to copy link.'));
         });
       }
     }
@@ -136,8 +138,10 @@
     const yearSubject = (document.getElementById('activityYear')?.value||'').trim();
     const deadline = (document.getElementById('activityDeadline')?.value||'').trim();
     const link = (document.getElementById('activityLink')?.value||'').trim();
+
     if(!title||!yearSubject||!link) return alert('Please fill required fields.');
-    if(currentUser.role!=='teacher' && currentUser.role!=='admin') return alert('Only teachers/admins can post.');
+    if(currentUser.role!=='teacher' && currentUser.role!=='admin')
+      return alert('Only teachers/admins can post.');
 
     try{
       await db.collection('activities').add({
@@ -149,40 +153,54 @@
         authorEmail: currentUser.email,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+
       document.getElementById('activityTitle').value='';
       document.getElementById('activityYear').value='';
       document.getElementById('activityDeadline').value='';
       document.getElementById('activityLink').value='';
+
       alert('Activity published!');
-    }catch(e){ console.error(e); alert('Failed to publish activity.'); }
+    } catch(e){
+      console.error(e);
+      alert('Failed to publish activity.');
+    }
   }
 
   (async ()=>{
     currentUser = await loadCurrentUserOrRedirect();
     if(!currentUser) return;
 
-    // TEACHER/ADMIN CREATE AREA
     const createArea = document.getElementById('createActivityArea');
     const postBtn = document.getElementById('postActivityBtn');
+
     if(createArea && postBtn){
       if(currentUser.role==='teacher'||currentUser.role==='admin'){
         createArea.classList.remove('hidden');
         postBtn.addEventListener('click', postActivity);
-      } else createArea.classList.add('hidden');
+      } else {
+        createArea.classList.add('hidden');
+      }
     }
 
     const container = document.getElementById('activitiesContainer');
     if(!container) return;
 
-    // Real-time listener for all activities
-    db.collection('activities').orderBy('createdAt','desc')
+    db.collection('activities')
+      .orderBy('createdAt','desc')
       .onSnapshot(snapshot=>{
         container.innerHTML='';
-        if(snapshot.empty){ container.innerHTML='<p style="color:var(--muted)">No activities yet.</p>'; return; }
+        if(snapshot.empty){
+          container.innerHTML='<p style="color:var(--muted)">No activities yet.</p>';
+          return;
+        }
         snapshot.forEach(doc=>{
           const el = renderActivityElement(doc.id, doc.data());
           container.appendChild(el);
         });
-      }, err=>{ console.error(err); container.innerHTML='<p style="color:var(--muted)">Error loading activities</p>'; });
+      }, err=>{
+        console.error(err);
+        container.innerHTML='<p>Error loading activities</p>';
+      });
   })();
 })();
+
