@@ -121,7 +121,7 @@ function loadPostsRealtime() {
       if (change.type === "modified") {
         const item = postsMap.get(id);
         if (item && item.el) {
-          patchPostElement(item.el, data);
+          patchPostElement(item.el, data); // <-- fixed missing function
         } else {
           const el = renderPostElement(id, data);
           postsMap.set(id, { el, commentsOpen: false });
@@ -303,7 +303,34 @@ function renderPostElement(postId, data) {
   return box;
 }
 
-// The rest of your existing functions (patchPostElement, toggleCommentsUI, removeCommentsListener, renderCommentElement) remain unchanged.
+//
+// PATCH POST ELEMENT
+// Update an existing post element in place
+//
+function patchPostElement(el, data) {
+  if (!el || !data) return;
+
+  // Update likes/dislikes
+  const likeSpan = el.querySelector(".like-count");
+  const dislikeSpan = el.querySelector(".dislike-count");
+  if (likeSpan) likeSpan.innerText = data.likes || 0;
+  if (dislikeSpan) dislikeSpan.innerText = data.dislikes || 0;
+
+  // Update title/body if changed
+  const titleEl = el.querySelector(".post-title");
+  const bodyEl = el.querySelector(".post-body");
+  if (titleEl) titleEl.innerText = data.title || "";
+  if (bodyEl) bodyEl.innerText = data.body || "";
+
+  // Update timestamp
+  const dateEl = el.querySelector(".timestamp");
+  if (dateEl && data.createdAt?.seconds) {
+    dateEl.innerText = new Date(data.createdAt.seconds * 1000).toLocaleString();
+  }
+}
+
+// The rest of your existing functions (toggleCommentsUI, removeCommentsListener, renderCommentElement) remain unchanged.
+
 
 
 
