@@ -11,19 +11,36 @@
 
   <link rel="stylesheet" href="css/style.css"/>
   <style>
-    #sectionModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; }
-    #sectionModal .modal-content { background:white; padding:20px; border-radius:8px; text-align:center; }
+    #sectionModal {
+      display:none;
+      position:fixed;
+      top:0; left:0;
+      width:100%; height:100%;
+      background:rgba(0,0,0,0.5);
+      justify-content:center;
+      align-items:center;
+      z-index:1000;
+    }
+    #sectionModal .modal-content {
+      background:white;
+      padding:20px;
+      border-radius:8px;
+      text-align:center;
+      max-width:300px;
+      width:90%;
+    }
     table { width:100%; border-collapse:collapse; margin-top:12px; }
     table, th, td { border:1px solid var(--muted); }
     th, td { padding:8px; text-align:center; }
-    .top-achievers { margin-top:16px; font-weight:bold; }
+    .top-achievers { margin-top:16px; font-weight:bold; text-align:center; }
+    .btn { cursor:pointer; padding:6px 12px; border:none; border-radius:4px; background:#2b6cb0; color:white; }
   </style>
 </head>
 <body>
   <div class="app">
     <div class="topnav card">
       <div class="title">Arkibo Achievers</div>
-      <button class="profile-btn" onclick="location.href='main.html'">↩</button>
+      <button class="profile-btn btn" onclick="location.href='main.html'">↩ Back</button>
     </div>
 
     <div id="leaderboardCard" class="card">
@@ -64,3 +81,4 @@
   <script src="js/achievers.js"></script>
 </body>
 </html>
+
