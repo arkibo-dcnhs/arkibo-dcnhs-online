@@ -15,6 +15,25 @@
   const gradeRemarksEl = document.getElementById('gradeRemarks');
   const submitBtn = document.getElementById('submitGrade');
 
+  // HELPER: Add star points to student
+  async function addStarPoints(points, reason=""){
+    try{
+      const studentSnap = await db.collection('users').where('email','==',studentEmail).limit(1).get();
+      if(studentSnap.empty) return;
+      const studentDocId = studentSnap.docs[0].id;
+      await db.collection('users').doc(studentDocId).set({
+        starPoints: firebase.firestore.FieldValue.increment(points)
+      }, { merge:true });
+
+      await db.collection('star_points_logs').add({
+        uid: studentSnap.docs[0].id,
+        points,
+        reason,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }catch(e){ console.error('Failed to add star points:', e); }
+  }
+
   // fetch student info
   const studentDoc = await db.collection('users').where('email','==',studentEmail).limit(1).get();
   let studentName='Student', gradeLevel='-';
@@ -49,8 +68,19 @@
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      alert('Grade submitted and notification sent!');
+      // AWARD STAR POINTS BASED ON GRADE VALUE
+      const numericGrade = Number(val);
+      let pointsAwarded = 0;
+      if(numericGrade>=90) pointsAwarded = 50;
+      else if(numericGrade>=75) pointsAwarded = 40;
+      else if(numericGrade>=60) pointsAwarded = 30;
+      else pointsAwarded = 20;
+
+      await addStarPoints(pointsAwarded, `Graded activity "${activityId}" with grade ${numericGrade}`);
+
+      alert(`Grade submitted and notification sent! Star Points awarded: ${pointsAwarded}`);
       gradeValueEl.value=''; gradeRemarksEl.value='';
     } catch(e){ console.error(e); alert('Failed to submit grade'); }
   });
 })();
+
