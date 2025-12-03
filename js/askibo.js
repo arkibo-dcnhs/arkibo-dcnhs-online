@@ -24,9 +24,7 @@ const commentsListenerMap = new Map(); // postId -> unsubscribeFn
   if (refreshBtn) refreshBtn.addEventListener("click", () => loadPostsSnapshotOnce());
 })();
 
-//
 // HELPER: Add star points to student
-//
 async function addStarPoints(points, reason="") {
   if (!currentUser || currentUser.role !== "student") return;
   try {
@@ -35,7 +33,7 @@ async function addStarPoints(points, reason="") {
       starPoints: firebase.firestore.FieldValue.increment(points)
     }, { merge: true });
 
-    // Optionally, create a log (can be used for debugging / future leaderboard details)
+    // Optional log
     await db.collection("star_points_logs").add({
       uid: currentUser.uid,
       points,
@@ -47,9 +45,7 @@ async function addStarPoints(points, reason="") {
   }
 }
 
-//
 // CREATE POST
-//
 async function createPost() {
   const titleEl = document.getElementById("postTitle");
   const bodyEl = document.getElementById("postBody");
@@ -85,9 +81,7 @@ async function createPost() {
   }
 }
 
-//
 // Load posts realtime with incremental changes
-//
 function loadPostsRealtime() {
   const postsRef = db.collection("askibo_posts").orderBy("createdAt", "desc");
   postsRef.onSnapshot(snapshot => {
@@ -136,9 +130,7 @@ function loadPostsRealtime() {
   });
 }
 
-//
 // One-time refresh
-//
 async function loadPostsSnapshotOnce() {
   const snapshot = await db.collection("askibo_posts").orderBy("createdAt", "desc").get();
   const listEl = document.getElementById("postsList");
@@ -156,9 +148,7 @@ async function loadPostsSnapshotOnce() {
   });
 }
 
-//
-// RENDER POST ELEMENT
-//
+// Render post element
 function renderPostElement(postId, data) {
   const box = document.createElement("div");
   box.className = "post";
@@ -290,5 +280,6 @@ function renderPostElement(postId, data) {
   return box;
 }
 
-// The rest of your existing functions (patchPostElement, toggleCommentsUI, removeCommentsListener, renderCommentElement, escapeHtml) remain **unchanged**.
+// The rest of your existing functions (patchPostElement, toggleCommentsUI, removeCommentsListener, renderCommentElement, escapeHtml) remain unchanged.
+
 
