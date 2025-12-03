@@ -5,6 +5,19 @@ let currentUser = null;
 const postsMap = new Map();          // postId -> { el, commentsOpen }
 const commentsListenerMap = new Map(); // postId -> unsubscribeFn
 
+//
+// ESCAPE HTML (needed for rendering posts/comments safely)
+//
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 (async () => {
   currentUser = await loadCurrentUser();
   if (!currentUser) {
@@ -24,7 +37,9 @@ const commentsListenerMap = new Map(); // postId -> unsubscribeFn
   if (refreshBtn) refreshBtn.addEventListener("click", () => loadPostsSnapshotOnce());
 })();
 
+//
 // HELPER: Add star points to student
+//
 async function addStarPoints(points, reason="") {
   if (!currentUser || currentUser.role !== "student") return;
   try {
@@ -33,7 +48,7 @@ async function addStarPoints(points, reason="") {
       starPoints: firebase.firestore.FieldValue.increment(points)
     }, { merge: true });
 
-    // Optional log
+    // Optionally, create a log
     await db.collection("star_points_logs").add({
       uid: currentUser.uid,
       points,
@@ -45,7 +60,9 @@ async function addStarPoints(points, reason="") {
   }
 }
 
+//
 // CREATE POST
+//
 async function createPost() {
   const titleEl = document.getElementById("postTitle");
   const bodyEl = document.getElementById("postBody");
@@ -81,7 +98,9 @@ async function createPost() {
   }
 }
 
+//
 // Load posts realtime with incremental changes
+//
 function loadPostsRealtime() {
   const postsRef = db.collection("askibo_posts").orderBy("createdAt", "desc");
   postsRef.onSnapshot(snapshot => {
@@ -130,7 +149,9 @@ function loadPostsRealtime() {
   });
 }
 
+//
 // One-time refresh
+//
 async function loadPostsSnapshotOnce() {
   const snapshot = await db.collection("askibo_posts").orderBy("createdAt", "desc").get();
   const listEl = document.getElementById("postsList");
@@ -148,7 +169,9 @@ async function loadPostsSnapshotOnce() {
   });
 }
 
-// Render post element
+//
+// RENDER POST ELEMENT
+//
 function renderPostElement(postId, data) {
   const box = document.createElement("div");
   box.className = "post";
@@ -280,6 +303,7 @@ function renderPostElement(postId, data) {
   return box;
 }
 
-// The rest of your existing functions (patchPostElement, toggleCommentsUI, removeCommentsListener, renderCommentElement, escapeHtml) remain unchanged.
+// The rest of your existing functions (patchPostElement, toggleCommentsUI, removeCommentsListener, renderCommentElement) remain unchanged.
+
 
 
