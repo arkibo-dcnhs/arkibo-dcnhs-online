@@ -16,14 +16,19 @@ document.addEventListener('DOMContentLoaded', () => {
   if (loginBtn) loginBtn.addEventListener('click', loginFlow);
 });
 
-// register
+/* ----------------------------------------------------
+   REGISTER
+---------------------------------------------------- */
 async function registerFlow() {
   const name = (document.getElementById('regFullName')||{}).value?.trim();
   const email = (document.getElementById('regEmail')||{}).value?.trim();
   const pass = (document.getElementById('regPass')||{}).value;
   const role = (document.getElementById('regRole')||{}).value;
 
-  if (!name || !email || !pass || !role) { alert('Please fill all fields'); return; }
+  if (!name || !email || !pass || !role) { 
+    alert('Please fill all fields'); 
+    return; 
+  }
 
   let studentData = {};
   if (role === 'student') {
@@ -37,17 +42,18 @@ async function registerFlow() {
     const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
     const uid = userCredential.user.uid;
 
+    /* BASE FIRESTORE USER DATA */
     const base = {
       fullName: name,
       email,
       role,
       approved: role === 'student' ? false : true, // students start unapproved
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     };
 
     const userdata = Object.assign(base, studentData);
 
-    // auto-approve teachers if allowed
+    /* AUTO-APPROVE TEACHERS (IF MATCHING CONFIG) */
     const approvedTeachers = await getApprovedTeachers();
     if (role === 'teacher' && approvedTeachers.includes(email)) {
       userdata.approved = true;
@@ -57,18 +63,33 @@ async function registerFlow() {
       }
     }
 
+    /* SAVE USER IN PRIMARY USERS COLLECTION */
     await db.collection('users').doc(uid).set(userdata);
 
-    try { await userCredential.user.sendEmailVerification(); } catch(e){}
+    /* ENSURE LEADERBOARD PROFILE EXISTS */
+    await ensureUserDoc(
+      uid,
+      name,
+      email,
+      userdata.role,
+      userdata.section || ""
+    );
+
+    try { 
+      await userCredential.user.sendEmailVerification(); 
+    } catch(e){}
 
     alert('Registered successfully. Student accounts require admin approval.');
     window.location.href = 'index.html';
+
   } catch (e) {
     alert(e.message);
   }
 }
 
-// login
+/* ----------------------------------------------------
+   LOGIN
+---------------------------------------------------- */
 async function loginFlow() {
   const email = (document.getElementById('loginEmail')||{}).value?.trim();
   const pass = (document.getElementById('loginPass')||{}).value;
@@ -77,8 +98,10 @@ async function loginFlow() {
   if (!email || !pass) { alert('Enter email and password'); return; }
 
   try {
-    if (remember) await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-    else await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+    if (remember)
+      await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    else
+      await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
 
     const uc = await auth.signInWithEmailAndPassword(email, pass);
 
@@ -97,8 +120,19 @@ async function loginFlow() {
       return;
     }
 
+    /* ENSURE USER LEADERBOARD PROFILE EXISTS */
+    await ensureUserDoc(
+      data.uid,
+      data.fullName,
+      data.email,
+      data.role,
+      data.section || ""
+    );
+
+    /* Save session */
     localStorage.setItem('arkibo_user', JSON.stringify(data));
     window.location.href = 'main.html';
+
   } catch (e) {
     alert(e.message);
   }
