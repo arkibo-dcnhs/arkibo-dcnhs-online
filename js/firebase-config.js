@@ -18,12 +18,13 @@ if (!firebase.apps.length) {
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Approved teachers list for immediate testing
+/* --------------------------------------------------------
+   APPROVED TEACHERS — REMAINS SAME
+-------------------------------------------------------- */
 const approvedTeachersForTesting = [
   "malacatnicolorenzo@gmail.com"
 ];
 
-// helper: returns approvedTeachers config doc if present; otherwise fallback
 async function getApprovedTeachers() {
   try {
     const doc = await db.collection("config").doc("approvedTeachers").get();
@@ -37,16 +38,20 @@ async function getApprovedTeachers() {
   return approvedTeachersForTesting;
 }
 
-/* -----------------------------
-   Optional: Firestore references
-   ----------------------------- */
+/* --------------------------------------------------------
+   COLLECTION REFERENCES (EXPANDED for LEADERBOARD SYSTEM)
+-------------------------------------------------------- */
 const collections = {
   announcements: db.collection("announcements"),
   activities: db.collection("activities"),
   config: db.collection("config"),
+  users: db.collection("users"),            // 🔥 stores user profiles (students + teachers)
+  starPoints: db.collection("starPoints")  // 🔥 central point tracking system
 };
 
-// helper to get student submission for a specific activity
+/* --------------------------------------------------------
+   HELPERS — SUBMISSIONS (existing)
+-------------------------------------------------------- */
 function getActivitySubmissionRef(activityId, studentUid) {
   return collections.activities
     .doc(activityId)
@@ -54,11 +59,72 @@ function getActivitySubmissionRef(activityId, studentUid) {
     .doc(studentUid);
 }
 
-// helper to get all submissions for a specific activity (teacher/admin)
 function getActivitySubmissionsRef(activityId) {
   return collections.activities
     .doc(activityId)
     .collection("submissions");
 }
+
+/* --------------------------------------------------------
+   NEW HELPERS — STAR POINT SYSTEM
+-------------------------------------------------------- */
+
+/**
+ * Ensures a user exists in the 'users' collection.
+ * Called on login.
+ */
+async function ensureUserDoc(uid, name, email, role, section = "") {
+  const ref = collections.users.doc(uid);
+  const snap = await ref.get();
+
+  if (!snap.exists) {
+    await ref.set({
+      uid,
+      name,
+      email,
+      role,        // "student" or "teacher"
+      section,     // students only
+      starPoints: 0
+    });
+  }
+}
+
+/**
+ * Awards star points to a student.
+ * @param {string} uid - student user ID
+ * @param {number} amount - points to add
+ */
+async function addStarPoints(uid, amount) {
+  const ref = collections.users.doc(uid);
+  await ref.update({
+    starPoints: firebase.firestore.FieldValue.increment(amount)
+  });
+
+  // also logged into starPoints history
+  await collections.starPoints.add({
+    uid,
+    amount,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+/**
+ * Sets or updates a student's section.
+ */
+async function setStudentSection(uid, section) {
+  await collections.users.doc(uid).update({ section });
+}
+
+/**
+ * Fetch top 10 achievers (real-time)
+ */
+function getTopAchievers(limitCount = 10) {
+  return collections.users
+    .where("role", "==", "student")
+    .orderBy("starPoints", "desc")
+    .limit(limitCount);
+}
+
+
 
 
