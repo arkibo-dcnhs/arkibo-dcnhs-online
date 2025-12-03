@@ -13,7 +13,9 @@ async function loadCurrentUser() {
         return null;
       }
       return userData;
-    } catch(e){ localStorage.removeItem('arkibo_user'); }
+    } catch (e) {
+      localStorage.removeItem('arkibo_user');
+    }
   }
 
   return new Promise((resolve) => {
@@ -35,7 +37,74 @@ async function loadCurrentUser() {
           localStorage.setItem('arkibo_user', JSON.stringify(data));
           resolve(data);
         } else { resolve(null); }
-      } catch(e){ console.error(e); resolve(null); }
+      } catch (e) { console.error(e); resolve(null); }
     });
   });
 }
+
+/* -----------------------------------------
+   🔥 NEW ADDITIONS BELOW — NO REMOVALS
+------------------------------------------*/
+
+// Fetch fresh user data safely
+async function safeGetUser(uid) {
+  try {
+    const doc = await db.collection('users').doc(uid).get();
+    return doc.exists ? doc.data() : null;
+  } catch (e) {
+    console.error("safeGetUser() error:", e);
+    return null;
+  }
+}
+
+// Refresh localStorage after updating user
+async function updateLocalUser(uid) {
+  try {
+    const newData = await safeGetUser(uid);
+    if (newData) {
+      newData.uid = uid;
+      localStorage.setItem('arkibo_user', JSON.stringify(newData));
+    }
+  } catch (e) {
+    console.error("updateLocalUser() failed:", e);
+  }
+}
+
+/* -----------------------------------------
+   ⭐ STAR POINTS SYSTEM (GLOBAL UTILITY)
+------------------------------------------*/
+
+// amount can be positive or negative
+async function incrementStarPoints(uid, amount) {
+  if (!uid || !amount) return;
+
+  try {
+    const userRef = db.collection('users').doc(uid);
+    const doc = await userRef.get();
+
+    if (!doc.exists) return;
+
+    const user = doc.data();
+
+    // Only students can earn points
+    if (user.role !== "student") {
+      console.warn("Teachers/Admins will NOT earn points.");
+      return;
+    }
+
+    const newPoints = (user.starPoints || 0) + amount;
+
+    await userRef.set({
+      starPoints: newPoints
+    }, { merge: true });
+
+    // refresh local cache
+    await updateLocalUser(uid);
+
+    console.log(`Star Points Updated: +${amount} → Total = ${newPoints}`);
+
+  } catch (e) {
+    console.error("incrementStarPoints() error:", e);
+  }
+}
+
