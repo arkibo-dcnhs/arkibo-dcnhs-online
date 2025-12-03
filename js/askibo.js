@@ -292,8 +292,3 @@ function renderPostElement(postId, data) {
 
 // The rest of your existing functions (patchPostElement, toggleCommentsUI, removeCommentsListener, renderCommentElement, escapeHtml) remain **unchanged**.
 
-
-
-
-
-
