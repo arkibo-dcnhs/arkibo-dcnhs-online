@@ -2,7 +2,7 @@
 // Robust Askibo Forums client (real-time posts, comments, reactions, single listeners, stable UI)
 
 let currentUser = null;
-const postsMap = new Map();          // postId -> { el, commentsOpen }
+const postsMap = new Map();           // postId -> { el, commentsOpen }
 const commentsListenerMap = new Map(); // postId -> unsubscribeFn
 
 //
@@ -29,7 +29,7 @@ function escapeHtml(str) {
   const createBtn = document.getElementById("createPostBtn");
   if (createBtn) createBtn.addEventListener("click", createPost);
 
-  // Start real-time posts listener (incremental updates)
+  // Start real-time posts listener
   loadPostsRealtime();
 
   // Optional: refresh button if present
@@ -48,7 +48,6 @@ async function addStarPoints(points, reason="") {
       starPoints: firebase.firestore.FieldValue.increment(points)
     }, { merge: true });
 
-    // Optionally, create a log
     await db.collection("star_points_logs").add({
       uid: currentUser.uid,
       points,
@@ -86,10 +85,8 @@ async function createPost() {
       dislikes: 0
     });
 
-    // Award star points for creating post
     await addStarPoints(20, "Posted in Askibo Forums");
 
-    // Clear composer
     if (titleEl) titleEl.value = "";
     if (bodyEl) bodyEl.value = "";
   } catch (err) {
@@ -99,7 +96,7 @@ async function createPost() {
 }
 
 //
-// Load posts realtime with incremental changes
+// Load posts realtime
 //
 function loadPostsRealtime() {
   const postsRef = db.collection("askibo_posts").orderBy("createdAt", "desc");
@@ -121,11 +118,7 @@ function loadPostsRealtime() {
       if (change.type === "modified") {
         const item = postsMap.get(id);
         if (item && item.el) {
-          patchPostElement(item.el, data); // <-- fixed missing function
-        } else {
-          const el = renderPostElement(id, data);
-          postsMap.set(id, { el, commentsOpen: false });
-          listEl.insertBefore(el, listEl.firstChild);
+          patchPostElement(item.el, data);
         }
       }
 
@@ -144,29 +137,98 @@ function loadPostsRealtime() {
     }
   }, err => {
     console.error("Posts realtime error:", err);
-    const listEl = document.getElementById("postsList");
-    if (listEl) listEl.innerHTML = "<p>Error loading posts. Check console.</p>";
   });
 }
 
 //
-// One-time refresh
+// TOGGLE COMMENTS UI & LISTENER
 //
-async function loadPostsSnapshotOnce() {
-  const snapshot = await db.collection("askibo_posts").orderBy("createdAt", "desc").get();
-  const listEl = document.getElementById("postsList");
-  if (!listEl) return;
-  listEl.innerHTML = "";
-  postsMap.forEach((v, k) => {
-    removeCommentsListener(k);
-  });
-  postsMap.clear();
+function toggleCommentsUI(postId) {
+  const area = document.getElementById(`comments-area-${postId}`);
+  if (!area) return;
 
-  snapshot.forEach(doc => {
-    const el = renderPostElement(doc.id, doc.data());
-    postsMap.set(doc.id, { el, commentsOpen: false });
-    listEl.appendChild(el);
-  });
+  const item = postsMap.get(postId);
+  if (!item) return;
+
+  if (area.style.display === "none") {
+    area.style.display = "block";
+    item.commentsOpen = true;
+    startCommentsListener(postId);
+  } else {
+    area.style.display = "none";
+    item.commentsOpen = false;
+    removeCommentsListener(postId);
+  }
+}
+
+//
+// COMMENTS REALTIME LISTENER
+//
+function startCommentsListener(postId) {
+  if (commentsListenerMap.has(postId)) return;
+
+  const listEl = document.getElementById(`comments-${postId}`);
+  if (!listEl) return;
+
+  const unsubscribe = db.collection("askibo_posts").doc(postId)
+    .collection("comments").orderBy("createdAt", "asc")
+    .onSnapshot(snapshot => {
+      listEl.innerHTML = "";
+      snapshot.forEach(doc => {
+        const commentEl = renderCommentElement(doc.data());
+        listEl.appendChild(commentEl);
+      });
+      if (snapshot.empty) {
+        listEl.innerHTML = "<p class='small' style='color:#888'>No comments yet.</p>";
+      }
+    });
+
+  commentsListenerMap.set(postId, unsubscribe);
+}
+
+function removeCommentsListener(postId) {
+  const unsubscribe = commentsListenerMap.get(postId);
+  if (unsubscribe) {
+    unsubscribe();
+    commentsListenerMap.delete(postId);
+  }
+}
+
+//
+// RENDER COMMENT ELEMENT
+//
+function renderCommentElement(data) {
+  const div = document.createElement("div");
+  div.className = "comment-item";
+  div.style.borderBottom = "1px solid #eee";
+  div.style.padding = "6px 0";
+  
+  const date = data.createdAt?.seconds
+    ? new Date(data.createdAt.seconds * 1000).toLocaleString()
+    : "Just now";
+
+  div.innerHTML = `
+    <div style="font-size:12px; color: var(--green-1);"><strong>${escapeHtml(data.byName)}</strong></div>
+    <div style="font-size:14px; margin: 2px 0;">${escapeHtml(data.body)}</div>
+    <div class="small" style="font-size:10px; color:#999;">${date}</div>
+  `;
+  return div;
+}
+
+//
+// PATCH POST ELEMENT
+//
+function patchPostElement(el, data) {
+  if (!el || !data) return;
+  const likeSpan = el.querySelector(".like-count");
+  const dislikeSpan = el.querySelector(".dislike-count");
+  if (likeSpan) likeSpan.innerText = data.likes || 0;
+  if (dislikeSpan) dislikeSpan.innerText = data.dislikes || 0;
+
+  const titleEl = el.querySelector(".post-title");
+  const bodyEl = el.querySelector(".post-body");
+  if (titleEl) titleEl.innerText = data.title || "";
+  if (bodyEl) bodyEl.innerText = data.body || "";
 }
 
 //
@@ -202,135 +264,62 @@ function renderPostElement(postId, data) {
       </div>
     </div>
 
-    <div class="comments-area" id="comments-area-${postId}" style="display:none; margin-top:12px;">
+    <div class="comments-area" id="comments-area-${postId}" style="display:none; margin-top:12px; border-top:1px dashed #ccc; padding-top:10px;">
       <div class="comments-list" id="comments-${postId}"></div>
 
       <div class="comment-composer" style="margin-top:8px;">
         <div class="comment-input">
-          <textarea id="composer-${postId}" placeholder="Write a comment..." rows="2"></textarea>
+          <textarea id="composer-${postId}" placeholder="Write a comment..." rows="2" style="width:100%"></textarea>
         </div>
         <div class="comment-actions" style="margin-top:6px;">
-          <button class="btn small" data-post="${postId}" id="sendComment-${postId}">Send</button>
-          <button class="btn secondary small" data-post="${postId}" id="cancelComment-${postId}">Cancel</button>
+          <button class="btn small send-comment" data-post="${postId}">Send</button>
+          <button class="btn secondary small cancel-comment" data-post="${postId}">Cancel</button>
         </div>
       </div>
     </div>
   `;
 
-  const likeBtn = box.querySelector(".like-btn");
-  const dislikeBtn = box.querySelector(".dislike-btn");
-  const commentToggle = box.querySelector(".comment-toggle");
-  const sendBtn = box.querySelector(`#sendComment-${postId}`);
-  const cancelBtn = box.querySelector(`#cancelComment-${postId}`);
-
-  // TRANSACTION SAFE: Like post
-  likeBtn?.addEventListener("click", async (e) => {
-    e.preventDefault();
-    const span = likeBtn.querySelector(".like-count");
-    const prev = Number(span.innerText || 0);
-    span.innerText = prev + 1;
-    try {
-      const postRef = db.collection("askibo_posts").doc(postId);
-      await db.runTransaction(async t => {
-        const doc = await t.get(postRef);
-        const currentLikes = doc.data()?.likes || 0;
-        t.update(postRef, { likes: currentLikes + 1 });
-      });
-    } catch (err) {
-      console.error("Like error:", err);
-      span.innerText = prev;
-      alert("Failed to like. Check console.");
-    }
-  });
-
-  // TRANSACTION SAFE: Dislike post
-  dislikeBtn?.addEventListener("click", async (e) => {
-    e.preventDefault();
-    const span = dislikeBtn.querySelector(".dislike-count");
-    const prev = Number(span.innerText || 0);
-    span.innerText = prev + 1;
-    try {
-      const postRef = db.collection("askibo_posts").doc(postId);
-      await db.runTransaction(async t => {
-        const doc = await t.get(postRef);
-        const currentDislikes = doc.data()?.dislikes || 0;
-        t.update(postRef, { dislikes: currentDislikes + 1 });
-      });
-    } catch (err) {
-      console.error("Dislike error:", err);
-      span.innerText = prev;
-      alert("Failed to dislike. Check console.");
-    }
-  });
-
-  commentToggle?.addEventListener("click", (e) => {
-    e.preventDefault();
-    toggleCommentsUI(postId);
-  });
-
-  sendBtn?.addEventListener("click", async (e) => {
-    e.preventDefault();
+  // Attach Listeners
+  box.querySelector(".like-btn").onclick = () => handleReaction(postId, 'likes');
+  box.querySelector(".dislike-btn").onclick = () => handleReaction(postId, 'dislikes');
+  box.querySelector(".comment-toggle").onclick = () => toggleCommentsUI(postId);
+  
+  box.querySelector(".send-comment").onclick = async () => {
     const ta = document.getElementById(`composer-${postId}`);
-    if (!ta) return;
     const text = ta.value.trim();
     if (!text) return alert("Enter a comment.");
+    
     try {
       await db.collection("askibo_posts").doc(postId).collection("comments").add({
         body: text,
         byName: currentUser.fullName || currentUser.name || "Unknown",
         byEmail: currentUser.email || "",
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        likes: 0,
-        dislikes: 0
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-
-      // Award star points for commenting
       await addStarPoints(15, "Commented on post");
-
       ta.value = "";
     } catch (err) {
-      console.error("Add comment error:", err);
-      alert("Failed to add comment. Check console.");
+      console.error(err);
     }
-  });
+  };
 
-  cancelBtn?.addEventListener("click", (e) => {
-    e.preventDefault();
-    const ta = document.getElementById(`composer-${postId}`);
-    if (ta) ta.value = "";
-  });
+  box.querySelector(".cancel-comment").onclick = () => {
+    document.getElementById(`composer-${postId}`).value = "";
+  };
 
   return box;
 }
 
-//
-// PATCH POST ELEMENT
-// Update an existing post element in place
-//
-function patchPostElement(el, data) {
-  if (!el || !data) return;
-
-  // Update likes/dislikes
-  const likeSpan = el.querySelector(".like-count");
-  const dislikeSpan = el.querySelector(".dislike-count");
-  if (likeSpan) likeSpan.innerText = data.likes || 0;
-  if (dislikeSpan) dislikeSpan.innerText = data.dislikes || 0;
-
-  // Update title/body if changed
-  const titleEl = el.querySelector(".post-title");
-  const bodyEl = el.querySelector(".post-body");
-  if (titleEl) titleEl.innerText = data.title || "";
-  if (bodyEl) bodyEl.innerText = data.body || "";
-
-  // Update timestamp
-  const dateEl = el.querySelector(".timestamp");
-  if (dateEl && data.createdAt?.seconds) {
-    dateEl.innerText = new Date(data.createdAt.seconds * 1000).toLocaleString();
+// Transaction helper for likes/dislikes
+async function handleReaction(postId, type) {
+  const postRef = db.collection("askibo_posts").doc(postId);
+  try {
+    await db.runTransaction(async t => {
+      const doc = await t.get(postRef);
+      const newVal = (doc.data()[type] || 0) + 1;
+      t.update(postRef, { [type]: newVal });
+    });
+  } catch (err) {
+    console.error("Reaction error:", err);
   }
 }
-
-// The rest of your existing functions (toggleCommentsUI, removeCommentsListener, renderCommentElement) remain unchanged.
-
-
-
-
